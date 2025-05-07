@@ -19,8 +19,13 @@ def enumerating():
 
 @pytest.fixture
 def user_factory(page: Page, enumerating):
+    admin_creds = {
+        "username": "admin",
+        "password": "zaq1@WSX"
+    }
     def create_user(method="api", user_type="user"):
         user_number = enumerating()
+        nonlocal admin_creds
         payload = {
             "name": f"test_{user_type}{user_number}",
             "email": f"test_{user_type}{user_number}@nieruchomex.pl",
@@ -44,13 +49,9 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("textbox", name="Password", exact=True).fill(payload["password"])
             page.get_by_role("textbox", name="Confirm password").click()
             page.get_by_role("textbox", name="Confirm password").fill(payload["password"])
-            page.get_by_role("button", name="Sign up").click()
+            page.get_by_role("button", name="Submit").click()
         elif method == "api" and user_type == "admin":
             payload["type"] = "ADMIN"
-            admin_creds = {
-                "username": "admin",
-                "password": payload["password"]
-            }
             r = requests.post(f"{API_URL}/auth/login", json=admin_creds)
             if not r.status_code == requests.codes.ok:
                 raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
@@ -62,39 +63,55 @@ def user_factory(page: Page, enumerating):
             page.goto(PAGE_URL)
             page.get_by_role("link", name="Sign in").click()
             page.get_by_role("textbox", name="Username").click()
-            page.get_by_role("textbox", name="Username").fill("admin")
+            page.get_by_role("textbox", name="Username").fill(admin_creds["username"])
             page.get_by_role("textbox", name="Password").click()
-            page.get_by_role("textbox", name="Password").fill(payload["password"])
-            page.get_by_role("button", name="Sign in").click()
+            page.get_by_role("textbox", name="Password").fill(admin_creds["password"])
+            page.get_by_role("button", name="Submit").click()
             page.get_by_role("button", name="A", exact=True).click()
-            page.get_by_role("menuitem", name="Admin Panel").click()
-            page.get_by_role("button", name="Create User").click()
-            page.get_by_role("combobox").click()
-            page.get_by_role("option", name="Admin").click()
+            page.get_by_role("menuitem", name="Admin panel").click()
+            page.get_by_role("button", name="Create user").click()
             page.get_by_role("textbox", name="Username").click()
             page.get_by_role("textbox", name="Username").fill(payload["name"])
             page.get_by_role("textbox", name="Password").click()
-            page.get_by_role("textbox", name="Password").fill(payload["name"])
+            page.get_by_role("textbox", name="Password").fill(payload["password"])
             page.get_by_role("textbox", name="Email").click()
-            page.get_by_role("textbox", name="Email").fill(f"{payload["name"]}@nieruchomex.pl")
+            page.get_by_role("textbox", name="Email").fill(payload["email"])
             page.get_by_role("textbox", name="Phone number").click()
-            page.get_by_role("textbox", name="Phone number").fill(f"{random.randrange(111111111, 999999999)}")
+            page.get_by_role("textbox", name="Phone number").fill(payload["phone"])
+            page.get_by_role("combobox").click()
+            page.get_by_role("option", name="Admin").click()
             page.get_by_role("button", name="Create user").click()
         else:
             raise ValueError(f"Unknown user creation method: {method}")
         return {"username": payload["name"], "password": payload["password"]}
-    return create_user
 
+    yield create_user
+
+    d = requests.post(f"{API_URL}/auth/login", json=admin_creds)
+    if not d.status_code == requests.codes.ok:
+        raise RuntimeError(f"Request error: {d.status_code} - {d.reason}")
+    s_cookie = d.cookies.get_dict()
+    d = requests.get(f"{API_URL}/users", cookies=s_cookie)
+    if not d.status_code == requests.codes.ok:
+        raise RuntimeError(f"Request error: {d.status_code} - {d.reason}")
+    test_users = []
+    for u in d.json()["data"]:
+        if u["name"].startswith("test_"):
+            test_users.append(u)
+    for t_user in test_users:
+        d = requests.delete(f"{API_URL}/users/{t_user["id"]}", cookies=s_cookie)
+        if not d.status_code == requests.codes.ok:
+            raise RuntimeError(f"Request error: {d.status_code} - {d.reason}")
 
 @pytest.fixture
 def post_factory(enumerating):
-    created_posts = []
     def create_post(test_user, params: dict):
         post_number = enumerating()
         payload = {
             "username": test_user["username"],
             "password": test_user["password"]
         }
+        print(payload)
         p = requests.post(f"{API_URL}/auth/login", json=payload)
         if not p.status_code == requests.codes.ok:
             raise RuntimeError(f"Request error: {p.status_code} - {p.reason}")
@@ -115,60 +132,5 @@ def post_factory(enumerating):
         if not p.status_code == requests.codes.created:
             raise RuntimeError(f"Request error: {p.status_code} - {p.reason}")
         post = p.json()["data"]
-        created_posts.append(post["id"])
-        return post, cookie
-
-    yield create_post
-    
-    for post_id in created_posts:
-        r = requests.delete(f"{API_URL}/posts/{post_id}", cookies=cookie)
-        if not r.status_code == requests.codes.ok:
-            raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-
-
-@pytest.fixture()
-def delete_posts(enumerating, create_user_api):
-    yield
-    payload = {
-        "username": create_user_api["username"],
-        "password": create_user_api["password"]
-    }
-    r = requests.post(f"{API_URL}/auth/login", json=payload)
-    if not r.status_code == requests.codes.ok:
-        raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-    cookie = r.cookies.get_dict()
-    r = requests.get(f"{API_URL}/posts", params={"status": "DRAFT"})
-    if not r.status_code == requests.codes.ok:
-        raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-    test_posts = []
-    for p in r.json()["data"]:
-        if p["title"].startswith("test_"):
-            test_posts.append(p)
-    for t_posts in test_posts:
-        r = requests.delete(f"{API_URL}/posts/{t_posts["id"]}", cookies=cookie)
-        if not r.status_code == requests.codes.ok:
-            raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-
-
-@pytest.fixture()
-def delete_all_users():
-    yield
-    payload = {
-        "username": "admin",
-        "password": "zaq1@WSX"
-    }
-    r = requests.post(f"{API_URL}/auth/login", json=payload)
-    if not r.status_code == requests.codes.ok:
-        raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-    cookie = r.cookies.get_dict()
-    r = requests.get(f"{API_URL}/users", cookies=cookie)
-    if not r.status_code == requests.codes.ok:
-        raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
-    test_users = []
-    for u in r.json()["data"]:
-        if u["name"].startswith("test_"):
-            test_users.append(u)
-    for t_user in test_users:
-        r = requests.delete(f"{API_URL}/users/{t_user["id"]}", cookies=cookie)
-        if not r.status_code == requests.codes.ok:
-            raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
+        return post
+    return create_post
