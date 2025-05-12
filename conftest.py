@@ -111,7 +111,6 @@ def post_factory(enumerating):
             "username": test_user["username"],
             "password": test_user["password"]
         }
-        print(payload)
         p = requests.post(f"{API_URL}/auth/login", json=payload)
         if not p.status_code == requests.codes.ok:
             raise RuntimeError(f"Request error: {p.status_code} - {p.reason}")
