@@ -50,6 +50,8 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("textbox", name="Confirm password").click()
             page.get_by_role("textbox", name="Confirm password").fill(payload["password"])
             page.get_by_role("button", name="Submit").click()
+            page.get_by_test_id("user-nav-button").click()
+            page.get_by_role("menuitem", name="Sign out").click()
         elif method == "api" and user_type == "admin":
             payload["type"] = "ADMIN"
             r = requests.post(f"{API_URL}/auth/login", json=admin_creds)
@@ -67,7 +69,7 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("textbox", name="Password").click()
             page.get_by_role("textbox", name="Password").fill(admin_creds["password"])
             page.get_by_role("button", name="Submit").click()
-            page.get_by_role("button", name="A", exact=True).click()
+            page.get_by_test_id("user-nav-button").click()
             page.get_by_role("menuitem", name="Admin panel").click()
             page.get_by_role("button", name="Create user").click()
             page.get_by_role("textbox", name="Username").click()
@@ -81,6 +83,8 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("combobox").click()
             page.get_by_role("option", name="Admin").click()
             page.get_by_role("button", name="Create user").click()
+            page.get_by_test_id("user-nav-button").click()
+            page.get_by_role("menuitem", name="Sign out").click()
         else:
             raise ValueError(f"Unknown user creation method: {method}")
         return {"username": payload["name"], "password": payload["password"]}
