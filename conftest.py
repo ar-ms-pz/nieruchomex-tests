@@ -1,6 +1,5 @@
 import random
-from operator import truediv
-
+import time
 import pytest
 import requests
 from playwright.sync_api import Page
@@ -39,7 +38,7 @@ def user_factory(page: Page, enumerating):
             if not r.status_code == requests.codes.ok:
                 raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
         elif method == "ui" and user_type == "user":
-            page.goto(PAGE_URL)
+            goto_wait(page, PAGE_URL)
             page.get_by_role("link", name="Sign up").click()
             page.get_by_role("textbox", name="Username").click()
             page.get_by_role("textbox", name="Username").fill(payload["name"])
@@ -64,7 +63,7 @@ def user_factory(page: Page, enumerating):
             if not r.status_code == requests.codes.ok:
                 raise RuntimeError(f"Request error: {r.status_code} - {r.reason}")
         elif method == "ui" and user_type == "admin":
-            page.goto(PAGE_URL)
+            goto_wait(page, PAGE_URL)
             page.get_by_role("link", name="Sign in").click()
             page.get_by_role("textbox", name="Username").click()
             page.get_by_role("textbox", name="Username").fill(admin_creds["username"])
@@ -143,7 +142,7 @@ def post_factory(enumerating):
 
 
 def sign_in_ui(user, page: Page) -> bool:
-    page.goto(PAGE_URL)
+    goto_wait(page, PAGE_URL)
     page.get_by_test_id("sign-in-button").click()
     page.get_by_role("textbox", name="Username").click()
     page.get_by_role("textbox", name="Username").fill(f"{user["username"]}")
@@ -156,11 +155,12 @@ def sign_in_ui(user, page: Page) -> bool:
         return True
 
 
-def sign_out_ui(page) -> bool:
-    page.goto(PAGE_URL)
+def sign_out_ui(page: Page):
+    goto_wait(page, PAGE_URL)
     page.get_by_test_id("user-nav-button").click()
     page.get_by_role("menuitem", name="Sign out").click()
-    if page.get_by_test_id("sign-in-button").is_visible():
-        return False
-    else:
-        return True
+
+
+def goto_wait(page: Page, url):
+    page.goto(url)
+    time.sleep(1)

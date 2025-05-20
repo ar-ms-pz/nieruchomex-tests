@@ -1,7 +1,7 @@
-import re
+import time
 
 from playwright.sync_api import Page, expect
-from conftest import PAGE_URL, sign_in_ui, sign_out_ui
+from conftest import PAGE_URL, sign_in_ui, sign_out_ui, goto_wait
 
 expect.set_options(timeout=10_000)
 NEW_PASSWORD = "zaq1@WSXcde3"
@@ -26,7 +26,7 @@ def test_user_change_data(page: Page, user_factory):
     page.get_by_role("button", name="Save").click()
     test_user["password"] = NEW_PASSWORD
 
-    assert sign_out_ui(page), "Cannot sign out"
+    sign_out_ui(page)
 
     assert sign_in_ui(test_user, page), "Cannot logon on user with changed password or data"
 
@@ -37,15 +37,31 @@ def test_user_change_data(page: Page, user_factory):
     expect(page.get_by_test_id("email-input"), "Email did not change or changed to value other than test value").to_have_value(f"changed_{test_user["email"]}")
 
 
-#def test_admin_user_permissions(page: Page, user_factory, post_factory):
-#    page.goto(PAGE_URL)
-#    test_admin = user_factory(method="api", user_type="admin")
-#
-#    assert test_admin is not None, "Cannot create test admin user"
-#    assert sign_in_ui(test_admin, page), "Cannot logon crated admin user"
-#
-#    page.goto(f"{PAGE_URL}/admin")
-#    expect(page.get_by_text(re.compile("403")), "Logged user does not have permission to view admin panel").not_to_be_visible()
+def test_admin_user_permissions(page: Page, user_factory, post_factory):
+    goto_wait(page, PAGE_URL)
+    test_admin = user_factory(method="api", user_type="admin")
+
+    assert test_admin is not None, "Cannot create test admin user"
+    assert sign_in_ui(test_admin, page), "Cannot logon crated admin user"
+
+    goto_wait(page, f"{PAGE_URL}/admin")
+    expect(page.get_by_test_id("error-page-status-code"), "Cannot view admin panel").not_to_be_visible()
+
+    test_post = post_factory(test_admin, params={"status": "PUBLISHED"})
+    assert test_post is not None
+
+    goto_wait(page, f"{PAGE_URL}/posts/{test_post["id"]}")
+    # issue: created post cannot be accessed
+    page.get_by_role("link", name="Edit").click()
+    expect(page.get_by_test_id("delete-post-button"), "Cannot delete created post").to_be_visible()
+
+    sign_out_ui(page)
+    test_user = user_factory(method="api", user_type="user")
+    assert test_user is not None
+    assert sign_in_ui(test_user, page)
+
+    goto_wait(page, f"{PAGE_URL}/posts/{test_post["id"]}")
+    expect(page.get_by_role("link", name="Edit"), "User can edit other user's post").not_to_be_visible()
 
 
 def test_user_ui_post_create(user_factory, post_factory):
