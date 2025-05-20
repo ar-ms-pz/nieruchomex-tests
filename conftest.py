@@ -1,4 +1,6 @@
 import random
+from operator import truediv
+
 import pytest
 import requests
 from playwright.sync_api import Page
@@ -87,7 +89,7 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("menuitem", name="Sign out").click()
         else:
             raise ValueError(f"Unknown user creation method: {method}")
-        return {"username": payload["name"], "password": payload["password"]}
+        return {"username": payload["name"], "password": payload["password"], "email": payload["email"], "phone": payload["phone"]}
 
     yield create_user
 
@@ -111,6 +113,7 @@ def user_factory(page: Page, enumerating):
 def post_factory(enumerating):
     def create_post(test_user, params: dict):
         post_number = enumerating()
+        random_int = random.randrange(1, 2147483647)
         payload = {
             "username": test_user["username"],
             "password": test_user["password"]
@@ -123,9 +126,9 @@ def post_factory(enumerating):
             "title": params.get("title", f"Test post number:{post_number}"),
             "description": params.get("description", f"Default description for test post {post_number}"),
             "status": params.get("status", "DRAFT"),
-            "rooms": params.get("rooms", "1"),
-            "area": params.get("area", "1"),
-            "price": params.get("price", "1"),
+            "rooms": params.get("rooms", f"{random_int}"),
+            "area": params.get("area", f"{random_int}"),
+            "price": params.get("price", f"{random_int}"),
             "type": params.get("type", "SALE"),
             "address": params.get("address", "Gabriela Narutowicza 11/12, 80-233 Gdańsk"),
             "longitude": params.get("longitude", "18.61323725767105"),
@@ -137,3 +140,27 @@ def post_factory(enumerating):
         post = p.json()["data"]
         return post
     return create_post
+
+
+def sign_in_ui(user, page: Page) -> bool:
+    page.goto(PAGE_URL)
+    page.get_by_test_id("sign-in-button").click()
+    page.get_by_role("textbox", name="Username").click()
+    page.get_by_role("textbox", name="Username").fill(f"{user["username"]}")
+    page.get_by_role("textbox", name="Password").click()
+    page.get_by_role("textbox", name="Password").fill(f"{user["password"]}")
+    page.get_by_role("button", name="Submit").click()
+    if page.url == f"{PAGE_URL}/sign-in":
+        return False
+    else:
+        return True
+
+
+def sign_out_ui(page) -> bool:
+    page.goto(PAGE_URL)
+    page.get_by_test_id("user-nav-button").click()
+    page.get_by_role("menuitem", name="Sign out").click()
+    if page.get_by_test_id("sign-in-button").is_visible():
+        return False
+    else:
+        return True
