@@ -51,7 +51,6 @@ def test_admin_user_permissions(page: Page, user_factory, post_factory):
     assert test_post is not None
 
     goto_wait(page, f"{PAGE_URL}/posts/{test_post["id"]}")
-    # issue: created post cannot be accessed
     page.get_by_role("link", name="Edit").click()
     expect(page.get_by_test_id("delete-post-button"), "Cannot delete created post").to_be_visible()
 
