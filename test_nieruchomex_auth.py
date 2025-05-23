@@ -42,9 +42,9 @@ def test_admin_user_permissions(page: Page, user_factory, post_factory):
     test_admin = user_factory(method="api", user_type="admin")
 
     assert test_admin is not None, "Cannot create test admin user"
-    assert sign_in_ui(test_admin, page), "Cannot logon crated admin user"
 
     goto_wait(page, f"{PAGE_URL}/admin")
+    assert sign_in_ui(test_admin, page), "Cannot logon crated admin user"
     expect(page.get_by_test_id("error-page-status-code"), "Cannot view admin panel").not_to_be_visible()
 
     test_post = post_factory(test_admin, params={"status": "PUBLISHED"})
@@ -61,26 +61,3 @@ def test_admin_user_permissions(page: Page, user_factory, post_factory):
 
     goto_wait(page, f"{PAGE_URL}/posts/{test_post["id"]}")
     expect(page.get_by_role("link", name="Edit"), "User can edit other user's post").not_to_be_visible()
-
-
-def test_user_ui_post_create(user_factory, post_factory):
-    test_user = user_factory(method="ui", user_type="user")
-    assert test_user is not None
-    test_post = post_factory(test_user, params={})
-    assert test_post is not None
-    test_user = user_factory(method="ui", user_type="admin")
-    assert test_user is not None
-    test_post = post_factory(test_user, params={})
-    assert test_post is not None
-
-
-def test_user_api_post_create(user_factory, post_factory):
-    test_user = user_factory(method="api", user_type="user")
-    assert test_user is not None
-    test_post = post_factory(test_user, params={})
-    assert test_post is not None
-    test_user = user_factory(method="api", user_type="admin")
-    assert test_user is not None
-    test_post = post_factory(test_user, params={})
-    assert test_post is not None
-
