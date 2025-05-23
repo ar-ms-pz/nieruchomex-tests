@@ -1,5 +1,3 @@
-import time
-
 from playwright.sync_api import Page, expect
 from conftest import PAGE_URL, sign_in_ui, sign_out_ui, goto_wait
 
