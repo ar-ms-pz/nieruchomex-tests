@@ -29,7 +29,7 @@ def user_factory(page: Page, enumerating):
         nonlocal admin_creds
         payload = {
             "name": f"test_{user_type}{user_number}",
-            "email": f"test_{user_type}{user_number}@nieruchomex.pl",
+            "email": f"test_{user_type}{user_number}@nieruchomex.com",
             "phone": f"{random.randrange(111111111, 999999999)}",
             "password": "zaq1@WSX"
         }
