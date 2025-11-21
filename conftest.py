@@ -4,8 +4,8 @@ import pytest
 import requests
 from playwright.sync_api import Page
 
-API_URL = "http://api.nieruchomex.com"
-PAGE_URL = "http://nieruchomex.com"
+API_URL = "https://api.nieruchomex.com"
+PAGE_URL = "https://nieruchomex.com"
 
 
 @pytest.fixture(scope="session")
