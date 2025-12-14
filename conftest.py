@@ -7,7 +7,6 @@ from playwright.sync_api import Page
 API_URL = "https://api.nieruchomex.com/"
 PAGE_URL = "https://nieruchomex.com/"
 
-
 @pytest.fixture(scope="session")
 def enumerating():
     number = 0
@@ -52,7 +51,7 @@ def user_factory(page: Page, enumerating):
             page.get_by_role("textbox", name="Confirm password").fill(payload["password"])
             page.get_by_role("button", name="Submit").click()
             page.get_by_test_id("user-nav-button").click()
-            page.get_by_role("menuitem", name="Sign out").click()
+            page.get_by_role("menuitem", name="Sign out").click(timeout=10_000)
         elif method == "api" and user_type == "admin":
             payload["type"] = "ADMIN"
             r = requests.post(f"{API_URL}/auth/login", json=admin_creds)
