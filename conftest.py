@@ -163,4 +163,3 @@ def sign_out_ui(page: Page):
 def goto_wait(page: Page, url):
     page.goto(url)
     time.sleep(1)
-#new
